@@ -70,9 +70,12 @@ def replaypkt(path:str):
             headers = {}
             for h in rawheaders:
                 key = h.split(":")[0]
-                value = ''.join(h.split(":")[1:])
+                value = ''.join(h.split(":")[1:]).lstrip()
                 headers[key] = value
-            headers = '"' + str(headers) + '"'
+            # drop headers we dont want
+            del headers['If-None-Match']
+            del headers['']
+            headers =str(headers)
             method = '"' + p.http.request_method + '"'
             return render_template('http_client.py.template', headers=headers, method=method, url=url)
 
