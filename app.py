@@ -65,19 +65,26 @@ def replaypkt(path:str):
             except Exception as e:
                 return str(e)
             
-            rawheaders = fullrequest.split("\r\n")[1:]
+            rawheaders = fullrequest.split("\r\n\r\n")[0].split("\r\n")[1:]
+            data = ''
+            if len(fullrequest.split("\r\n\r\n")) > 1:
+                data = '\r\n\r\n'.join(fullrequest.split("\r\n\r\n")[1:])
             # XXX this means it cannot have repeat headers; use socket mode in that case?
             headers = {}
             for h in rawheaders:
                 key = h.split(":")[0]
-                value = ''.join(h.split(":")[1:]).lstrip()
+                value = ':'.join(h.split(":")[1:]).lstrip()
                 headers[key] = value
             # drop headers we dont want
-            del headers['If-None-Match']
-            del headers['']
+            if headers.get("If-None-Match"):
+                del headers['If-None-Match']
+            if headers.get(""):
+                del headers['']
             headers =str(headers)
             method = '"' + p.http.request_method + '"'
-            return render_template('http_client.py.template', headers=headers, method=method, url=url)
+            return render_template('http_client.py.template', headers=headers, method=method, url=url, data=data)
+        elif p.http.get('response') == '1':
+            ...
 
 
 

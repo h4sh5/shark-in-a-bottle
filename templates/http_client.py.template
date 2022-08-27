@@ -4,7 +4,8 @@
 import requests
 
 headers = {{headers}}
-r = requests.request(method={{method}}, url={{url}}, headers=headers)
+data='''{{data}}'''
+r = requests.request(method={{method}}, url={{url}}, headers=headers, data=data)
 
 print(r.status_code)
 
