@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+
+import socket
+
+s = socket.socket()
+
+data = {{data}}
+
+s.bind(('', {{srcport}}))
+s.connect(({{host}}, {{port}}))
+
+s.send(data)
+
+print(s.recv(2048))

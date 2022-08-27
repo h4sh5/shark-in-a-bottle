@@ -7,7 +7,7 @@ import os
 import time
 import json
 import subprocess
- 
+
 app = Flask(__name__,
             static_url_path='',
             static_folder='templates',
@@ -84,6 +84,17 @@ def gen_replay_http_response(p, cap=None):
         # headers[key] = value
     return Response(render_template('http_response.py.template', headers=headers, status=response_code, body=body), mimetype='text/plain')
 
+def gen_replay_tcp(p):
+    host = '"'+p.ip.dst+'"'
+    port = p.tcp.dstport
+    srcport = p.tcp.port
+    data = bytes.fromhex(p.tcp.payload.replace(':',''))
+
+    return Response(render_template('tcp_request.py.template', host=host,port=port,srcport=srcport,data=data), mimetype='text/plain')
+
+
+def gen_replay_udp(p):
+    return "WIP"
 
 @app.route("/replay/<path>")
 def replaypkt(path:str):
@@ -105,19 +116,25 @@ def replaypkt(path:str):
     # select packet
     p = cap[int(pktnum) - 1] # tshark's output is 1-indexed
 
-    # TODO need to be smart about tcp sessions
+    if replaytype == 'auto':
+        if len(p.get_multiple_layers("HTTP")) > 0: #means HTTP exists
+            replaytype = "http"
+        else:
+            replaytype = 'socket'
 
     if replaytype == "http":
         if p.http.get('request') == '1':
-            return gen_replay_http_request(p)
+            return gen_replay_http_request(p) #,cap=cap) # optional
    
         elif p.http.get('response') == '1':
             return gen_replay_http_response(p)
 
-
-            
     elif replaytype == "socket":
-        return "WIP"
+        if len(p.get_multiple_layers("TCP")) > 0:
+            return gen_replay_tcp(p)
+        elif len(p.get_multiple_layers("UDP")) > 0:
+            return gen_replay_udp(p)
+
     else:
         return "invalid replay type"
 
