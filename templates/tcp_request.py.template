@@ -2,7 +2,11 @@
 
 import socket
 
-s = socket.socket()
+{% if ':' in host %}
+s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+{%else%}
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+{%endif%}
 
 data = {{data}}
 
@@ -11,4 +15,4 @@ s.connect(({{host}}, {{port}}))
 
 s.send(data)
 
-print(s.recv(2048))
+print(s.recv(4096))
