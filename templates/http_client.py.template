@@ -1,7 +1,10 @@
+##<pre>
+# python3 request script
+
 import requests
 
 headers = {{headers}}
-r = requests.request(method={{method}}, url={{url}}, headers={{headers}})
+r = requests.request(method={{method}}, url={{url}}, headers=headers)
 
 print(r.status_code)
 
@@ -11,3 +14,4 @@ for i in r.headers:
 
 #import code
 #code.interact(local=locals())
+##</pre>
