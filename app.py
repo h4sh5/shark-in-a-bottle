@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-from flask import Flask, render_template, request,jsonify
+from flask import Flask, render_template, request,jsonify,Response
 from werkzeug.utils import secure_filename
 import hashlib
 import pyshark
 import os
 import time
 import json
+import subprocess
+
 app = Flask(__name__,
             static_url_path='',
             static_folder='templates',
@@ -31,6 +33,58 @@ def streampackets(path: str):
 
     return app.response_class(generate(), mimetype='application/json')
 
+
+def gen_replay_http_request(p, cap=None):
+    url = '"' + p.http.request_full_uri + '"'
+    # right now only supports tcp/http (not QUIC)
+    # manual header parsing cos everything sucks
+    fullrequest=''
+    try:
+        # XXX ascii or utf-8?
+        fullrequest = bytes.fromhex(p.tcp.payload.replace(':','')).decode('utf-8')
+    except Exception as e:
+        return str(e)
+    
+    rawheaders = fullrequest.split("\r\n\r\n")[0].split("\r\n")[1:]
+    data = ''
+    if len(fullrequest.split("\r\n\r\n")) > 1:
+        data = '\r\n\r\n'.join(fullrequest.split("\r\n\r\n")[1:])
+    # XXX this means it cannot have repeat headers; use socket mode in that case?
+    headers = {}
+    for h in rawheaders:
+        key = h.split(":")[0]
+        value = ':'.join(h.split(":")[1:]).lstrip()
+        headers[key] = value
+    # drop headers we dont want
+    if headers.get("If-None-Match"):
+        del headers['If-None-Match']
+    if headers.get(""):
+        del headers['']
+    headers =str(headers)
+    method = '"' + p.http.request_method + '"'
+    return Response(render_template('http_client.py.template', headers=headers, method=method, url=url, data=data),mimetype='text/plain')
+
+def gen_replay_http_response(p, cap=None):
+    response_code = int(p.http.response_code)
+    
+    # get headers somehow (need to parse the tcp response)
+
+    # XXX need to reconstruct/find tcp streams, ffs
+    body = bytes.fromhex(p.tcp.payload.replace(':','')).decode('utf-8')
+    
+    # if len(fullresponse.split("\r\n\r\n")) > 1:
+        # body = '\r\n\r\n'.join(fullresponse.split("\r\n\r\n")[1:])
+
+    # XXX this means it cannot have repeated/malformed headers; use socket mode in that case?
+    # TODO get headers somehow by getting and parsing the entire TCP stream
+    headers = {}
+    # for h in rawheaders:
+        # key = h.split(":")[0]
+        # value = ':'.join(h.split(":")[1:]).lstrip()
+        # headers[key] = value
+    return Response(render_template('http_response.py.template', headers=headers, status=response_code, body=body), mimetype='text/plain')
+
+
 @app.route("/replay/<path>")
 def replaypkt(path:str):
     args = request.args
@@ -47,49 +101,21 @@ def replaypkt(path:str):
     #     return "Error: invalid replay type"
     replaytype = args.get('replaytype')
 
-    cap = pyshark.FileCapture(os.path.join(UPLOADPATH, path), display_filter=displayfilter)
+    cap = pyshark.FileCapture(os.path.join(UPLOADPATH, path))
     # select packet
-    p = cap[int(pktnum)]
+    p = cap[int(pktnum) - 1] # tshark's output is 1-indexed
 
+    # TODO need to be smart about tcp sessions
 
     if replaytype == "http":
-        # if direction == 'client':
-        print(p)
         if p.http.get('request') == '1':
-            url = '"' + p.http.request_full_uri + '"'
-            # right now only supports tcp/http (not QUIC)
-            # manual header parsing cos everything sucks
-            try:
-                # XXX ascii or utf-8?
-                fullrequest = bytes.fromhex(p.tcp.payload.replace(':','')).decode('utf-8')
-            except Exception as e:
-                return str(e)
-            
-            rawheaders = fullrequest.split("\r\n\r\n")[0].split("\r\n")[1:]
-            data = ''
-            if len(fullrequest.split("\r\n\r\n")) > 1:
-                data = '\r\n\r\n'.join(fullrequest.split("\r\n\r\n")[1:])
-            # XXX this means it cannot have repeat headers; use socket mode in that case?
-            headers = {}
-            for h in rawheaders:
-                key = h.split(":")[0]
-                value = ':'.join(h.split(":")[1:]).lstrip()
-                headers[key] = value
-            # drop headers we dont want
-            if headers.get("If-None-Match"):
-                del headers['If-None-Match']
-            if headers.get(""):
-                del headers['']
-            headers =str(headers)
-            method = '"' + p.http.request_method + '"'
-            return render_template('http_client.py.template', headers=headers, method=method, url=url, data=data)
+            return gen_replay_http_request(p)
+   
         elif p.http.get('response') == '1':
-            ...
+            return gen_replay_http_response(p)
 
 
-
-
-
+            
     elif replaytype == "socket":
         return "WIP"
     else:
@@ -104,57 +130,15 @@ def showfile(path:str):
     args = request.args
     displayfilter = args.get('filter')
 
+    args = ['tshark', '-r', os.path.join(UPLOADPATH,path)]
+
     if displayfilter != None:
-        cap = pyshark.FileCapture(os.path.join(UPLOADPATH, path, display_filter=displayfilter))
-        # if there's a display filter, get every packet from that filter
-        start = time.time()
+        args.extend(['-Y', displayfilter])
 
-        # for p in cap:
-            # custom pretty print each layer
-            # for layer in p.layers:
+    output = subprocess.check_output(args)
+    output = output.decode('utf-8')
 
-
-
-        print('time taken:', time.time() - start)
-
-
-    else:
-        cap = pyshark.FileCapture(os.path.join(UPLOADPATH, path), only_summaries=True)
-        start = time.time()
-        protostats = {} # each type per count
-        for p in cap:
-            # HACK XXX attempt to turn a protocol name into a filter by some parsing 
-            proto_filter = str(p.protocol).lower().split('/')[0]
-            if protostats.get(proto_filter) == None:
-                protostats[proto_filter] = 0
-            protostats[proto_filter] += 1
-        print(protostats)
-        print('time taken:', time.time() - start)
-        return render_template('show.html', protostats=protostats,filename=path)
-
-# @app.route('/validatefilter/<path>')
-# def validatefilter(path:str):
-#     args = request.args
-#     display_filter = args['f']
-#     try:
-#         cap = pyshark.FileCapture(os.path.join(UPLOADPATH, path), display_filter=display_filter)
-#     except Exception as e:
-#         return jsonify({"success":0, "msg":str(e)})
-
-
-
-# @app.route('/displayfilter/<path>')
-# def filterfile(path:str):
-#     args = request.args
-#     display_filter = args['f']
-#     try:
-#         cap = pyshark.FileCapture(os.path.join(UPLOADPATH, path), display_filter=display_filter)
-#     except:
-
-
-
-
-
+    return render_template('show.html', filename=path, output=output)
 
 
 @app.route('/upload', methods = ['GET', 'POST'])

@@ -1,5 +1,4 @@
-##<pre>
-# python3 request script
+#!/usr/bin/env python3
 
 import requests
 
@@ -15,4 +14,3 @@ for i in r.headers:
 
 #import code
 #code.interact(local=locals())
-##</pre>

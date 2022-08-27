@@ -7,6 +7,14 @@
 </head>
 <body>
 
+	<form method=GET action=>
+		<p>Filter <input name=filter></p>
+		<p><input value=Go type=submit></p>
+	</form>
+	
+
+
+{#
 	<h2>protocol statistics</h2>
 	<div id=protostats>
 		<!-- For loop logic of jinja template -->
@@ -15,11 +23,12 @@
 		    <li><a href=/show/{{filename}}?filter={{k}}>{{k}}</a>: {{protostats[k]}}</li>
 		{%endfor%}
 	</div>
+ #}
 
 	<h2>Generate replay</h2>
 	<form method=GET action=/replay/{{filename}}>
 		<p>Pkt #<input name=pktnum type=number required></p>
-		<p>Filter <input name=filter></p>
+		
 		<!-- <p>Direction</p> -->
 		<!-- <input type="radio" id="direction_client" name="direction" value="client" checked=1> -->
 		<!-- <label for="direction_client">client</label><br> -->
@@ -37,6 +46,9 @@
 
 
 	</form>
+
+	<h2>Output</h2>
+	<pre>{{output}}</pre>
 	
 </body>
 </html>
