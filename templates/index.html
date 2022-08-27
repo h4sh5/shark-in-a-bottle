@@ -390,8 +390,10 @@
 							alert( ajax.responseText );
 							var data = JSON.parse( ajax.responseText );
 							form.classList.add( data.success == true ? 'is-success' : 'is-error' );
-							if( !data.success ) { 
+							if ( !data.success ) { 
 								errorMsg.textContent = data.error;
+							} else { // success - redirect to show page
+								window.location = data.path;
 							}
 
 							

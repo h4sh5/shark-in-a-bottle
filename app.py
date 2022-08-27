@@ -164,7 +164,7 @@ def upload_file():
             errmsg = str(e)
             return jsonify({"message":errmsg, 'success':0})
         if success_count > 0:
-            return jsonify({'message':'file uploaded successfully', 'success':1, 'path':'/file/'+md5hash})
+            return jsonify({'message':'file uploaded successfully', 'success':1, 'path':'/show/'+md5hash})
         else:
             return jsonify({'message':'no files uploaded', 'success':0})
         
