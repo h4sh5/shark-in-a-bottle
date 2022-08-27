@@ -94,7 +94,13 @@ def gen_replay_tcp(p):
 
 
 def gen_replay_udp(p):
-    return "WIP"
+    # TODO: actually* support IPV6 by using ipv6 here
+    host = '"'+p.ip.dst+'"'
+    port = p.udp.dstport
+    srcport = p.udp.port
+    data = bytes.fromhex(p.udp.payload.replace(':',''))
+
+    return Response(render_template('udp_request.py.template', host=host,port=port,srcport=srcport,data=data), mimetype='text/plain')
 
 @app.route("/replay/<path>")
 def replaypkt(path:str):
@@ -124,18 +130,26 @@ def replaypkt(path:str):
 
     if replaytype == "http":
         if p.http.get('request') == '1':
-            return gen_replay_http_request(p) #,cap=cap) # optional
-   
+            resp = gen_replay_http_request(p) #,cap=cap) # optional
+            cap.close()
+            return resp
         elif p.http.get('response') == '1':
-            return gen_replay_http_response(p)
+            resp = gen_replay_http_response(p)
+            cap.close()
+            return resp
 
     elif replaytype == "socket":
         if len(p.get_multiple_layers("TCP")) > 0:
-            return gen_replay_tcp(p)
+            resp = gen_replay_tcp(p)
+            cap.close()
+            return resp
         elif len(p.get_multiple_layers("UDP")) > 0:
-            return gen_replay_udp(p)
+            resp = gen_replay_udp(p)
+            cap.close()
+            return resp
 
     else:
+        cap.close()
         return "invalid replay type"
 
 @app.route('/show/<path>')
