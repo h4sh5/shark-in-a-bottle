@@ -153,7 +153,13 @@ def upload_file():
         success_count = 0
         md5hash = None
         try:
-            f = request.files.getlist('files[]')[0]
+            print(request.files.getlist('files[]'))
+            # find the first non-empty file
+            f = None
+            for f in request.files.getlist('files[]'):
+                if f.filename != '':
+                    break
+
             if f.filename != "":
                 print('secure filename: ', secure_filename(f.filename))
                 md5hash = hashlib.md5(f.read()).hexdigest()
