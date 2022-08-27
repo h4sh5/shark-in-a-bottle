@@ -1,0 +1,13 @@
+import requests
+
+headers = {{headers}}
+r = requests.request(method={{method}}, url={{url}}, headers={{headers}})
+
+print(r.status_code)
+
+print(r.text)
+for i in r.headers:
+    print(i + ": " + r.headers[i])
+
+#import code
+#code.interact(local=locals())

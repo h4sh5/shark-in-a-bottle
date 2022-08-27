@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Shark in a bottle</title>
+</head>
+<body>
+
+	<h2>protocol statistics</h2>
+	<div id=protostats>
+		<!-- For loop logic of jinja template -->
+		{%for k in protostats%}
+		  
+		    <li><a href=/show/{{filename}}?filter={{k}}>{{k}}</a>: {{protostats[k]}}</li>
+		{%endfor%}
+	</div>
+
+	<h2>Generate replay</h2>
+	<form method=GET action=/replay/{{filename}}>
+		<p>Pkt #<input name=pktnum type=number required></p>
+		<p>Filter <input name=filter></p>
+		<!-- <p>Direction</p> -->
+		<!-- <input type="radio" id="direction_client" name="direction" value="client" checked=1> -->
+		<!-- <label for="direction_client">client</label><br> -->
+       <!-- <input type="radio" id="direction_server" name="direction" value="server"> -->
+	   <!-- <label for="direction_server">server</label><br> -->
+
+	   <p>Type</p>
+	   <input type="radio" name="replaytype" value="http" checked=1>
+		<label for="direction_client">http</label><br>
+       <input type="radio" name="replaytype" value="socket">
+	   <label for="direction_server">sockets</label><br>
+
+	   <br>
+	   <input type=submit>
+
+
+	</form>
+	
+</body>
+</html>
