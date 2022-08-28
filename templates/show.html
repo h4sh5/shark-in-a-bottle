@@ -11,8 +11,6 @@
 		<p>Filter <input name=filter></p>
 		<p><input value=Go type=submit></p>
 	</form>
-	
-
 
 {#
 	<h2>protocol statistics</h2>
@@ -49,8 +47,14 @@
 
 	</form>
 
-	<h2>Output</h2>
-	<pre>{{output}}</pre>
+	<h2>Packets</h2>
+	<div id=packets style="font-family: monospace;">
+		{% for pktnum in packets %}
+		<span><a href=/show/{{filename}}/{{pktnum}}>{{pktnum}}</a> {{packets[pktnum]}}</span><br>
+		{% endfor %}
+
+	</div>
+		
 	
 </body>
 </html>
