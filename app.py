@@ -85,7 +85,13 @@ def gen_replay_http_response(p, cap=None):
     return Response(render_template('http_response.py.template', headers=headers, status=response_code, body=body), mimetype='text/plain')
 
 def gen_replay_tcp(p):
-    host = '"'+p.ip.dst+'"'
+    # check for ipv6
+    if p.get_multiple_layers('IPV6'):
+        host = '"' + p.ipv6.dst + '"'
+    elif p.get_multiple_layers("IP"):
+        host = '"'+p.ip.dst+'"'
+    else:
+        return Response("Error: not IP or IPv6. Not supported.", 400)
     port = p.tcp.dstport
     srcport = p.tcp.port
     data = bytes.fromhex(p.tcp.payload.replace(':',''))
@@ -94,8 +100,13 @@ def gen_replay_tcp(p):
 
 
 def gen_replay_udp(p):
-    # TODO: actually* support IPV6 by using ipv6 here
-    host = '"'+p.ip.dst+'"'
+    # check for ipv6
+    if p.get_multiple_layers('IPV6'):
+        host = '"' + p.ipv6.dst + '"'
+    elif p.get_multiple_layers("IP"):
+        host = '"'+p.ip.dst+'"'
+    else:
+        return Response("Error: not IP or IPv6. Not supported.", 400)
     port = p.udp.dstport
     srcport = p.udp.port
     data = bytes.fromhex(p.udp.payload.replace(':',''))
@@ -185,14 +196,12 @@ def showfile(path:str):
 
     output = subprocess.check_output(args)
     output = output.decode('utf-8')
-    print('output:',output)
     # make output a dictionary <pktnumber, packet> for purposes
     packets = {}
     for line in output.split("\n"):
         line = line.lstrip()
         pktnum = line.split(' ')[0]
         packets[pktnum] = ' '.join(line.split(' ')[1:])
-    print(packets)
     return render_template('show.html', filename=path, packets=packets)
 
 
