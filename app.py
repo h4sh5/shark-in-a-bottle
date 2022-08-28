@@ -105,9 +105,7 @@ def gen_replay_udp(p):
 @app.route("/replay/<path>")
 def replaypkt(path:str):
     args = request.args
-    displayfilter = None
-    if args.get('filter') != None:
-        displayfilter = args.get("filter")
+
     pktnum = args.get('pktnum')
     if pktnum == None:
         return "Error: no packet number chosen"
@@ -117,6 +115,8 @@ def replaypkt(path:str):
     # if direction != "client" and direction != "server":
     #     return "Error: invalid replay type"
     replaytype = args.get('replaytype')
+    if replaytype == None:
+        replaytype = "auto"
 
     cap = pyshark.FileCapture(os.path.join(UPLOADPATH, path))
     # select packet
@@ -152,6 +152,23 @@ def replaypkt(path:str):
         cap.close()
         return "invalid replay type"
 
+@app.route('/show/<path>/<pktnum>')
+def showpacket(path: str, pktnum: int):
+    '''
+    render a specific packet number (1-indexed) from a file
+    '''
+    cap = pyshark.FileCapture(os.path.join(UPLOADPATH, path))
+    # select packet
+    p = cap[int(pktnum) - 1] # tshark's output is 1-indexed
+
+    pdata = {}
+    for l in p.layers:
+        pdata[l.layer_name] = {}
+        for f in l.field_names:
+            pdata[l.layer_name][f] = l.get(f)
+    return render_template('packet.html', pdata=pdata,pktnum=pktnum,path=path)
+
+
 @app.route('/show/<path>')
 def showfile(path:str):
     '''
@@ -168,8 +185,15 @@ def showfile(path:str):
 
     output = subprocess.check_output(args)
     output = output.decode('utf-8')
-
-    return render_template('show.html', filename=path, output=output)
+    print('output:',output)
+    # make output a dictionary <pktnumber, packet> for purposes
+    packets = {}
+    for line in output.split("\n"):
+        line = line.lstrip()
+        pktnum = line.split(' ')[0]
+        packets[pktnum] = ' '.join(line.split(' ')[1:])
+    print(packets)
+    return render_template('show.html', filename=path, packets=packets)
 
 
 @app.route('/upload', methods = ['GET', 'POST'])
